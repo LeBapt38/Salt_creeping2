@@ -5,18 +5,20 @@
 class Case {
     private :
         friend class Reseau;
-        int type;
         float dist_front;
         float dist_cristal;
         float concentration;
         float proba_cristallisation;
+        int type; // -2 air, -1 eau, >= 0 cristal numéro...
 
     public :
-        Case(int type, float Dist_front = 0,float Dist_cristal = 0, float concentration = 0, float proba_cristallisation = 0);
+        
+        Case(int type, float Dist_front, float Dist_cristal, float concentration, float proba_cristallisation);
         Case();
         Case(const Case& old);
         Case& operator=(const Case& old);
         int get_type() const;
+        void set_type(int);
 
 
 

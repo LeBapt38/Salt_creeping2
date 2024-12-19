@@ -3,8 +3,11 @@
 
 #include <iostream>
 #include <array>
+#include <vector>
 #include <SFML/Graphics.hpp>
 #include "Case.hpp"
+class Site;
+#include"Cristaux.hpp"
 using namespace std;
 
 class Site {
@@ -24,9 +27,12 @@ private :
     int ny;
     Case* tab; 
     Case case_defaut;
+    vector<Cristal> cristaux;
     Site site_index(int) const;
+    friend class cristal;
 
 public :
+// valeur disponible
 //constructeurs
     Reseau(int, int, Case);
     Reseau();
@@ -42,7 +48,11 @@ public :
     int nbSite();
     Case operator[](Site) const;
     Case& operator[](Site);
+    vector<Cristal> get_cristaux() const;
+
+//Dynamique
     std::array<Site,8> voisins_immediat(Site);
+    void cristallisation_1case(Site, int type);
 
 // Rendue 
     void affiche_SFML(sf::RenderWindow& window, float x, float y) const;

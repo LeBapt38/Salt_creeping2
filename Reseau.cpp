@@ -8,7 +8,7 @@
 
 //Reseau
 
-Reseau::Reseau(int NX, int NY, Case val_def) : nx(NX), ny(NY), tab(nullptr), case_defaut(val_def){
+Reseau::Reseau(int NX, int NY, Case val_def) : nx(NX), ny(NY), tab(nullptr), case_defaut(val_def), cristaux({}){
     tab = new Case[nx*ny];
     for(int l = 0; l < nx*ny; l++){
         tab[l] = val_def;
@@ -17,7 +17,7 @@ Reseau::Reseau(int NX, int NY, Case val_def) : nx(NX), ny(NY), tab(nullptr), cas
 
 Reseau::Reseau() : Reseau(0,0,Case()){}
 
-Reseau::Reseau(const Reseau& other) : nx(other.nx), ny(other.ny), tab(nullptr), case_defaut(other.case_defaut){
+Reseau::Reseau(const Reseau& other) : nx(other.nx), ny(other.ny), tab(nullptr), case_defaut(other.case_defaut), cristaux(other.cristaux) {
 // le constructeur a acces au donnees prives du meme type    
     tab = new Case[nx*ny];
     for(int i = 0; i < nx*ny; i++){
@@ -37,6 +37,8 @@ Reseau& Reseau::operator=(const Reseau& reseau){
     std::swap(nx, temp.nx);
     std::swap(ny, temp.ny);
     std::swap(tab, temp.tab);
+    std::swap(case_defaut, temp.case_defaut);
+    std::swap(cristaux, temp.cristaux);
 
     return *this;
     // Destruction auto de temp
@@ -69,7 +71,7 @@ int Reseau::nbSite(){
 }
 
 Case Reseau::operator[](Site site) const{
-    Case* val;
+    Case* val = nullptr;
     if(site._index < 0) {
         *val = case_defaut;
     }else{
@@ -77,14 +79,15 @@ Case Reseau::operator[](Site site) const{
     }
     return *val;
 }
-Case& Reseau::operator[](Site site){
-        Case val;
-    if(site._index < 0) {
-        val = case_defaut;
-    }else{
-        val = tab[site._index];
+Case& Reseau::operator[](Site site) {
+    if (site._index >= 0 && site._index < nx*ny) {
+        return tab[site._index]; 
     }
-    return val;
+    return case_defaut; 
+}
+
+vector<Cristal> Reseau::get_cristaux() const{
+    return cristaux;
 }
 
 std::array<Site,8> Reseau::voisins_immediat(Site site){
@@ -94,13 +97,33 @@ std::array<Site,8> Reseau::voisins_immediat(Site site){
     return sitesVoisins;
 }
 
+void Reseau::cristallisation_1case(Site site, int type){
+    // Gestion de la case
+    tab[site._index].type = type;
+    tab[site._index].dist_cristal = 0;
+    tab[site._index].concentration = 0;
+    tab[site._index].proba_cristallisation = 0;
+
+    // Gestion du cristal
+    if(type >= 0 && type < int(cristaux.size())){
+        cristaux[type].listeSites.push_back(site);
+        cristaux[type].nbSites ++;
+    }else{
+        // Création d'un nouveau cristal avec angle aléatoire
+        std::vector<Site> sites;
+        sites.push_back(site);
+        Cristal nouveau({sites},float(rand())/RAND_MAX);
+        cristaux.push_back(nouveau);
+    }
+}
+
 void Reseau::affiche_SFML(sf::RenderWindow& window, float x, float y) const{
     for(int i=0; i<nx; i++){
         for(int j=0; j<ny; j++){
             sf::RectangleShape rectangle(sf::Vector2f(2,2));
-            if (tab[site_xy(i,j)._index].type == -1){
+            if (tab[site_xy(i,j)._index].type == -2){
                 rectangle.setFillColor(sf::Color(200,200,200));
-            }else if(tab[site_xy(i,j)._index].type ==0){
+            }else if(tab[site_xy(i,j)._index].type == -1){
                 rectangle.setFillColor(sf::Color(0, 100, 128));
             }else{
                 rectangle.setFillColor(sf::Color(100,100,100));

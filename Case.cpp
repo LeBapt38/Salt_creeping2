@@ -2,12 +2,13 @@
 #include <cstdlib>
 #include <iostream>
 
-Case::Case(int _type, float _Dist_front,float _Dist_cristal, float _concentration, float _proba_cristallisation) :
-    type(_type), dist_front(_Dist_front), dist_cristal(_Dist_cristal), concentration(_concentration), proba_cristallisation(_proba_cristallisation){}
+Case::Case(int _type, float _Dist_front,float _Dist_cristal, float _concentration, float _proba_cristallisation)
+    : dist_front(_Dist_front), dist_cristal(_Dist_cristal), concentration(_concentration), proba_cristallisation(_proba_cristallisation), type(_type){}
 
-Case::Case() : Case(0){}
+Case::Case() : Case(-1,0,0,0,0){}
 
-Case::Case(const Case& old) : type(old.type), dist_front(old.dist_front), dist_cristal(old.dist_cristal), concentration(old.concentration), proba_cristallisation(old.proba_cristallisation){}
+Case::Case(const Case& old)
+    : dist_front(old.dist_front), dist_cristal(old.dist_cristal), concentration(old.concentration), proba_cristallisation(old.proba_cristallisation), type(old.type){}
 
 Case& Case::operator=(const Case& old){
     Case temp(old);
@@ -22,4 +23,8 @@ Case& Case::operator=(const Case& old){
 
 int Case::get_type() const{
     return type;
+}
+
+void Case::set_type(int i){
+    type = i;
 }
