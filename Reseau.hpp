@@ -8,6 +8,7 @@
 #include "Case.hpp"
 class Site;
 #include"Cristaux.hpp"
+#include"FonctionsUtiles.hpp"
 using namespace std;
 
 class Site {
