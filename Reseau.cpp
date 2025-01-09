@@ -2,22 +2,23 @@
 #include <cstdlib>
 #include <array>
 #include <cmath>
+#include <algorithm>
 //Site
 
 
 
 //Reseau
 
-Reseau::Reseau(int NX, int NY, Case val_def) : nx(NX), ny(NY), tab(nullptr), case_defaut(val_def), cristaux({}){
+Reseau::Reseau(int NX, int NY, float DX, Case val_def) : nx(NX), ny(NY), dx(DX), tab(nullptr), case_defaut(val_def), cristaux({}){
     tab = new Case[nx*ny];
     for(int l = 0; l < nx*ny; l++){
         tab[l] = val_def;
     }
 }
 
-Reseau::Reseau() : Reseau(0,0,Case()){}
+Reseau::Reseau() : Reseau(0,0,1,Case()){}
 
-Reseau::Reseau(const Reseau& other) : nx(other.nx), ny(other.ny), tab(nullptr), case_defaut(other.case_defaut), cristaux(other.cristaux) {
+Reseau::Reseau(const Reseau& other) : nx(other.nx), ny(other.ny), dx(other.dx), tab(nullptr), case_defaut(other.case_defaut), cristaux(other.cristaux) {
 // le constructeur a acces au donnees prives du meme type    
     tab = new Case[nx*ny];
     for(int i = 0; i < nx*ny; i++){
@@ -45,12 +46,12 @@ Reseau& Reseau::operator=(const Reseau& reseau){
 }
 
 Site Reseau::site_index(int index) const{
-    Site a(index, index/nx, index%ny);
+    Site a(index, index/ny, index%ny);
     return a;
 }
 
 Site Reseau::site_xy(int x, int y) const{
-    Site a(x*nx+y,x,y);
+    Site a(x*ny+y,x,y);
     //Si on sort du tableau, on donne une valeur par defaut
     if(x >= nx || x < 0 || y >= ny || y <0){
         a._index = -1;
@@ -112,9 +113,125 @@ void Reseau::cristallisation_1case(Site site, int type){
         // Création d'un nouveau cristal avec angle aléatoire
         std::vector<Site> sites;
         sites.push_back(site);
-        Cristal nouveau({sites},float(rand())/RAND_MAX);
+        Cristal nouveau(sites,float(rand())/RAND_MAX);
         cristaux.push_back(nouveau);
     }
+    
+}
+
+std::vector<int> Reseau::type_crist_vois(std::array<Site,8> liste_sites){
+    std::vector<int> type = {};
+    // On parcours les sites et on prends ceux où il y a des cristaux 
+    for(Site site : liste_sites){
+        if(tab[site._index].type >= 0){
+            // on test si on a deja vu ce cristal
+            bool test = false;
+            for(int x : type){
+                if(!test){
+                    test = (x == tab[site._index].type);
+                }
+            }
+            // Si on a jamais vu le cristal on l'ajoute
+            if(!test){
+                type.push_back(tab[site._index].type);
+            }
+        }
+    }
+    return type;
+}
+
+int Reseau::nb_bord_commun(Site site){
+    int nb = 0;
+    int x = site._x;
+    int y = site._y;
+    if(tab[site_xy(x-1,y)._index].type >= 0) nb++;
+    if(tab[site_xy(x+1,y)._index].type >= 0) nb++;
+    if(tab[site_xy(x,y-1)._index].type >= 0) nb++;
+    if(tab[site_xy(x,y+1)._index].type >= 0) nb++;
+    return nb;
+}
+
+float Reseau::energie_liaison_site(Site site, float El){
+    std::array<Site,8> voisins = voisins_immediat(site);
+    std::vector<int> type_cristaux_vois = type_crist_vois(voisins);
+    int nb_bord_crist = nb_bord_commun(site);
+    float energie = nb_bord_crist * El; // nb bord * energie de liaison
+    if(type_cristaux_vois.size() == 2){
+        float angle = cristaux[type_cristaux_vois[0]].orientation - cristaux[type_cristaux_vois[1]].orientation;
+        float defaut_grain = joint_grain(angle);
+        energie *= 1-defaut_grain;
+    }else if(type_cristaux_vois.size() > 2){
+        energie = -1; // les energies negative seront traite comme empechant liaison
+    }
+    return energie;
+}
+
+float Reseau::proba_site(Site site, float long_liaison, float T, float z0){
+    float energie = energie_liaison_site(site);
+    float proba = exp(energie * long_liaison / (dx * 1.38e-23 * T));
+    if(energie < 0){
+        proba = 0;
+    }
+    float CsurCsat = exp(tab[site._index].dist_cristal / z0);
+    proba *= CsurCsat;
+    tab[site._index].proba_cristallisation = proba;
+    return proba;
+}
+
+float Reseau::sites_a_traiter(std::vector<Site>& a_traiter){
+    float surface = 0;
+    for(int i = 0; i < nx*ny; i++){
+        if(tab[i].type == -1){
+            // ajout de la case
+            a_traiter.push_back(site_index(i));
+            // Mis à jour de la surface eau/air
+            Site site = site_index(i);
+            int x = site._x;
+            int y = site._y;
+            if(tab[site_xy(x-1,y)._index].type == -2){
+                surface++;
+            }
+            if(tab[site_xy(x+1,y)._index].type == -2){
+                surface++;
+            }
+            if(tab[site_xy(x,y-1)._index].type == -2){
+                surface++;
+            }
+            if(tab[site_xy(x,y-1)._index].type == -2){
+                surface++;
+            }
+        }
+    }
+    return surface;
+}
+
+void Reseau::pas_de_temps(float proportion_cristalliser){
+    // extraction des cases a traiter
+    std::vector<Site> a_traiter;
+    float surface = sites_a_traiter(a_traiter);
+    // calcul des probabilites de cristallisations
+    float normalisation_proba = 0;
+    for(Site site : a_traiter){
+        normalisation_proba += proba_site(site);
+    }
+    float nb_site_a_cristalliser = 1 + surface * proportion_cristalliser;
+    normalisation_proba /= nb_site_a_cristalliser;
+    // Cristallisation
+    for(Site site : a_traiter){
+        tab[site._index].proba_cristallisation /= normalisation_proba;
+        float a = float(rand()) / RAND_MAX;
+        if(a < tab[site._index].proba_cristallisation){
+            int x = site._x;
+            int y = site._y;
+            std::array<int,4> type_vois = { tab[site_xy(x-1,y)._index].type,
+                                            tab[site_xy(x+1,y)._index].type,
+                                            tab[site_xy(x,y-1)._index].type,
+                                            tab[site_xy(x,y+1)._index].type};
+            int *type = std::min_element(type_vois.begin(), type_vois.end());
+            cristallisation_1case(site,*type);
+        }
+    }
+
 }
 
 void Reseau::affiche_SFML(sf::RenderWindow& window, float x, float y) const{

@@ -11,6 +11,9 @@ class Site;
 #include"FonctionsUtiles.hpp"
 using namespace std;
 
+
+
+
 class Site {
 private :
     int _index;
@@ -26,6 +29,7 @@ class Reseau{
 private :
     int nx;
     int ny;
+    float dx;
     Case* tab; 
     Case case_defaut;
     vector<Cristal> cristaux;
@@ -35,7 +39,7 @@ private :
 public :
 // valeur disponible
 //constructeurs
-    Reseau(int, int, Case);
+    Reseau(int, int, float, Case);
     Reseau();
     Reseau(const Reseau&);
     Reseau& operator= (const Reseau&);
@@ -52,8 +56,14 @@ public :
     vector<Cristal> get_cristaux() const;
 
 //Dynamique
-    std::array<Site,8> voisins_immediat(Site);
+    std::array<Site,8> voisins_immediat(Site); // donne la liste des 8 sites entourant le site donné
     void cristallisation_1case(Site, int type);
+    std::vector<int> type_crist_vois(std::array<Site,8>); // renvoie false si la case est est en contact avec deux cristaux différents.
+    int nb_bord_commun(Site);
+    float energie_liaison_site(Site,float El = 6.4e-19);
+    float proba_site(Site, float long_liaison = 2.36e-10 ,float T = 315,float z0 = 180e-6); // non normalise!!!, met a jour la proba de cristallisation dans la classe case et renvoie la meme proba
+    float sites_a_traiter(std::vector<Site>&);
+    void pas_de_temps(float proportion_cristalliser); //renvoie dt
 
 // Rendue 
     void affiche_SFML(sf::RenderWindow& window, float x, float y) const;
