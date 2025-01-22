@@ -60,9 +60,11 @@ public :
     void cristallisation_1case(Site, int type);
     std::vector<int> type_crist_vois(std::array<Site,8>); // renvoie false si la case est est en contact avec deux cristaux différents.
     int nb_bord_commun(Site);
-    float energie_liaison_site(Site,float El = 6.4e-19);
+    float energie_liaison_site(Site,float El = 6.4e-18);
     float proba_site(Site, float long_liaison = 2.36e-10 ,float T = 315,float z0 = 180e-6); // non normalise!!!, met a jour la proba de cristallisation dans la classe case et renvoie la meme proba
-    float sites_a_traiter(std::vector<Site>&);
+    std::vector<Site> sites_a_traiter(std::vector<Site>&);
+    void proximite_cristal(std::vector<Site>&, std::vector<float>&, std::vector<Cristal>&);
+    void proximite_gros_cristal(std::vector<Site>&, std::vector<float>&, std::vector<Site>&);
     void pas_de_temps(float proportion_cristalliser); //renvoie dt
 
 // Rendue 
