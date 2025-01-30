@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FuncFormatter
+import matplotlib.animation as animation
 import numpy as np
 import pandas as pd
 from math import pi
@@ -57,3 +58,50 @@ extent = [0, dx * grille_types.shape[0], 0, dx * grille_types.shape[1]]
 
 plt.imshow(grille_col, extent = extent)
 plt.show()
+
+## Animation
+nb_fichiers = 100
+
+df = pd.read_csv("image90.dat", delimiter="\s+", header=None)
+grille_types = df.to_numpy()
+grille_animation = np.full((nb_fichiers, grille_types.shape[0], grille_types.shape[1],3), 0)
+
+for i in range(nb_fichiers) :
+    df = pd.read_csv(f"image{i}.dat", delimiter="\s+", header=None)
+    grille_types = df.to_numpy()
+    grille_types = np.flip(grille_types.T, axis=0)
+    dx = 1e-7
+
+    nb_cristaux = grille_types.max()
+
+    grille_col = np.zeros((grille_types.shape[0], grille_types.shape[1], 3), dtype=np.uint8)
+    mask_eau = grille_types == -1
+    grille_col[mask_eau] = [0, 0, 255]
+    mask_air = grille_types == -2
+    grille_col[mask_air] = [255,255,255]
+    for j in range(nb_cristaux + 1) :
+        mask_cristaux = grille_types == j
+        grille_col[mask_cristaux] = [30 + j, 30+j, 30+j]
+    grille_animation[i,:,:,:] = grille_col
+
+
+# Create figure and axis
+fig, ax = plt.subplots()
+im = ax.imshow(grille_animation[0], animated=True)  # Initialize with the first frame
+ax.axis('off')  # Hide axes for a clean look
+
+# Update function for the animation
+def update(frame):
+    im.set_data(grille_animation[frame])  # Update image data
+    return [im]
+
+# Create the animation
+ani = animation.FuncAnimation(fig, update, frames=nb_fichiers, interval=100, blit=False, repeat=True)
+
+# Show the animation
+plt.show()
+
+
+
+
+

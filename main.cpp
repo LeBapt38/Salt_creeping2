@@ -9,7 +9,7 @@ using namespace std;
 int nx = 1000;
 int ny = 1000;
 float dx = 1e-7;
-bool visualisation = false;
+bool visualisation = true;
 int nb_pas_tps_image = 10;
 int nb_image = 100;
 string folder_data = "/mnt/c/Users/aiad_/Documents/magistère/FPT/Algo_cristallisation2/Salt_creeping2/Data/";
