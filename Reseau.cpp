@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include <fstream>
 //Site
 
 
@@ -351,6 +352,33 @@ void Reseau::pas_de_temps(float proportion_cristalliser){
     }
 
 
+}
+
+void Reseau::liste_taille_crist(std::string nom_fich){
+    fstream fich;
+    fich.open(nom_fich, ios::out);
+    for(Cristal crist : cristaux){
+        if(crist.nbSites > 0){
+            fich << crist.nbSites *dx << " ";
+        }
+    }
+    fich.close();
+}
+
+void Reseau::enregistre_grille(std::string nom_fich){
+    fstream fich;
+    fich.open(nom_fich, ios::out);
+    if (!fich) {
+        std::cerr << "Error opening file: " << nom_fich << std::endl;
+        return;
+    }
+    for(int i = 0; i < nx; i++){
+        for(int j = 0; j < ny; j++){
+            fich << (*this)[site_xy(i,j)].type << " ";
+        }
+        fich << '\n';
+    }
+    fich.close();
 }
 
 void Reseau::affiche_SFML(sf::RenderWindow& window, float x, float y) const{
