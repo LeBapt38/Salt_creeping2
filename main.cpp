@@ -9,8 +9,8 @@ using namespace std;
 int nx = 1000;
 int ny = 1000;
 float dx = 1e-7;
-bool visualisation = true;
-int nb_pas_tps_image = 10;
+bool visualisation = false;
+int nb_pas_tps_image = 500;
 int nb_image = 100;
 string folder_data = "/mnt/c/Users/aiad_/Documents/magistère/FPT/Algo_cristallisation2/Salt_creeping2/Data/";
 
@@ -40,12 +40,16 @@ int main(){
         for(int i = 0; i < nb_image; i++){
             for(int j = 0; j < nb_pas_tps_image; j++){
                 res.pas_de_temps(0.0001);
+                if(j%100 == 0){
+                    cout << j << " pas de temps depuis dernière image. \n";
+                }
             }
             string nom_fichier = folder_data + "image" + to_string(i) + ".dat";
             res.enregistre_grille(nom_fichier);
+            string nom_fichier_taille = folder_data + "taille_cristaux.dat";
+            res.liste_taille_crist(nom_fichier_taille);
+            cout << i << " images enregistées.\n";
         }
-        string nom_fichier = folder_data + "taille_cristaux.dat";
-        res.liste_taille_crist(nom_fichier);
     }
     return 0;
 }

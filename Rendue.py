@@ -28,9 +28,11 @@ for i in range(len(taille)) :
 
 proportion = nombre / nombre.sum()
 
-plt.plot(taille, proportion)
-plt.xlabel("Taille des cristaux en m")
-plt.ylabel("Proportion de cristaux de cette taille")
+taille *= 1e6
+
+plt.bar(taille, proportion, width = 1, edgecolor='black', alpha=0.7)
+plt.xlabel("Taille des cristaux en µm", fontsize = 16)
+plt.ylabel("Proportion de cristaux de cette taille", fontsize = 16)
 plt.show()
 
 ## affichage
@@ -60,9 +62,9 @@ plt.imshow(grille_col, extent = extent)
 plt.show()
 
 ## Animation
-nb_fichiers = 100
+nb_fichiers = 50
 
-df = pd.read_csv("image90.dat", delimiter="\s+", header=None)
+df = pd.read_csv("image0.dat", delimiter="\s+", header=None)
 grille_types = df.to_numpy()
 grille_animation = np.full((nb_fichiers, grille_types.shape[0], grille_types.shape[1],3), 0)
 
