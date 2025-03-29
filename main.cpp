@@ -7,19 +7,19 @@ using namespace std;
 
 
 int nx = 1000;
-int ny = 1000;
-float dx = 1e-7;
-bool visualisation = false;
-int nb_pas_tps_image = 500;
-int nb_image = 100;
+int ny = 500;
+float dx = 5e-8;
+bool visualisation = true;
+int nb_pas_tps_image = 50;
+int nb_image = 1000;
 string folder_data = "/mnt/c/Users/aiad_/Documents/magistère/FPT/Algo_cristallisation2/Salt_creeping2/Data/";
 
 
 int main(){
     Case val_defaut = Case();
     Reseau res(nx,ny,dx,val_defaut);
-    for(int i = 0; i < nx; i++){
-        for(int j = 0; j < 10; j++){
+    for(int i = 0; i < 100; i++){
+        for(int j = 0; j < ny; j++){
             res[res.site_xy(i,j)].set_type(-1);
         }
     }
@@ -27,7 +27,9 @@ int main(){
         sf::ContextSettings settings; settings.antialiasingLevel = 8; 
         sf::RenderWindow win (sf::VideoMode(nx,ny), "Mon super projet");
         while (win.isOpen()){
-            res.pas_de_temps(0.00001);
+            for(int i = 0; i < nb_pas_tps_image; i++){
+                res.pas_de_temps(0.001);
+            }
             win.clear(); 
             sf::Event event;
             while (win.pollEvent(event)) {
@@ -36,6 +38,7 @@ int main(){
             res.affiche_SFML(win,0,0);
             win.display();
         }
+        cout << res[res.site_xy(-1,-1)].get_type() << endl;
     }else{
         for(int i = 0; i < nb_image; i++){
             for(int j = 0; j < nb_pas_tps_image; j++){

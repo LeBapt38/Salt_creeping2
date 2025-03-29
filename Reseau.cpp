@@ -53,9 +53,12 @@ Site Reseau::site_index(int index) const{
 }
 
 Site Reseau::site_xy(int x, int y) const{
+    y = y%ny;
+    if(y<0){y += ny;}
+
     Site a(x*ny+y,x,y);
     //Si on sort du tableau, on donne une valeur par defaut
-    if(x >= nx || x < 0 || y >= ny || y <0){
+    if(x >= nx || x < 0){
         a._index = -1;
         a._x = -1;
         a._y = -1;
@@ -102,26 +105,25 @@ std::array<Site,8> Reseau::voisins_immediat(Site site){
 }
 
 void Reseau::cristallisation_1case(Site site, int type){
-    // Gestion de la case
-    tab[site._index].type = type;
-    tab[site._index].dist_cristal = 0;
-    tab[site._index].concentration = 0;
-    tab[site._index].proba_cristallisation = 0;
-
     // Gestion du cristal
     if(type >= 0 && type < int(cristaux.size())){
         cristaux[type].listeSites.push_back(site);
-        cristaux[type].nbSites ++;
+        cristaux[type].nbSites++;
     }else{
         // ajustement du type
-        tab[site._index].type = cristaux.size();
+        type = cristaux.size();
         // Création d'un nouveau cristal avec angle aléatoire
         std::vector<Site> sites;
         sites.push_back(site);
         Cristal nouveau(sites,float(rand())/RAND_MAX);
         cristaux.push_back(nouveau);
     }
-    
+    // Gestion de la case
+    tab[site._index].type = type;
+    tab[site._index].dist_cristal = 0;
+    tab[site._index].concentration = 0;
+    tab[site._index].proba_cristallisation = 0;
+    tab[site._index].taille_crist_proche = sqrt(cristaux[type].nbSites) * dx;
 }
 
 std::vector<int> Reseau::type_crist_vois(std::array<Site,8> liste_sites){
@@ -171,13 +173,13 @@ float Reseau::energie_liaison_site(Site site, float El){
     return energie;
 }
 
-float Reseau::proba_site(Site site, float long_liaison, float T, float z0){
+float Reseau::proba_site(Site site, float long_liaison, float T){
     float energie = energie_liaison_site(site);
     float proba = exp(energie * long_liaison / (dx * 1.38e-23 * T));
     if(energie < 0){
         proba = 0;
     }
-    float CsurCsat = exp(tab[site._index].dist_cristal / z0);
+    float CsurCsat = concentration(tab[site._index].dist_cristal, tab[site._index].taille_crist_proche);
     proba *= CsurCsat;
     tab[site._index].proba_cristallisation = proba;
     return proba;
@@ -196,76 +198,58 @@ std::vector<Site> Reseau::sites_a_traiter(std::vector<Site>& a_traiter){
             int x = site._x;
             int y = site._y;
             if((*this)[site_xy(x-1,y)].type == -2){
-                surface.push_back(site_xy(x-1,y));
+                surface.push_back(site_xy(x,y));
             }
             if((*this)[site_xy(x+1,y)].type == -2){
-                surface.push_back(site_xy(x+1,y));
+                surface.push_back(site_xy(x,y));
             }
             if((*this)[site_xy(x,y-1)].type == -2){
-                surface.push_back(site_xy(x,y-1));
+                surface.push_back(site_xy(x,y));
             }
             if((*this)[site_xy(x,y+1)].type == -2){
-                surface.push_back(site_xy(x,y+1));
+                surface.push_back(site_xy(x,y));
             }
         }
     }
     return surface;
 }
 
-void Reseau::proximite_cristal(std::vector<Site>& sites, std::vector<float>& distances, std::vector<Cristal>& cristaux_proches){
-    for(Site site : sites){
-        float d_min2 = nx*nx + ny*ny; 
-        Cristal crist_proche;
-        // Utilise l'heuristique que le cristal le plus proche est celui ayant le premier site le plus proche, sinon, augmente trop la complexité
-        for(Cristal crist : cristaux){
-            float d2 = (site._x - crist.listeSites[0]._x) * (site._x - crist.listeSites[0]._x);
-            d2 += (site._y - crist.listeSites[0]._y) * (site._y - crist.listeSites[0]._y);
-            if(d2 < d_min2){
-                d_min2 = d2;
-                crist_proche = crist;
-            }
+void Reseau::ajuste_dist(Site site){
+    std::queue<Site> pile;
+    pile.push(site);
+    while (!pile.empty()) {
+        Site a_traiter = pile.front();  
+        pile.pop();
+        float z = (*this)[a_traiter].dist_cristal + dx;
+        float h = (*this)[a_traiter].taille_crist_proche;
+        int x = a_traiter._x;
+        int y = a_traiter._y;
+        Case& case1 = (*this)[site_xy(x-1,y)];
+        if(case1.type < 0 && case1.dist_cristal/sqrt(case1.taille_crist_proche) > z/sqrt(h) + 1e-20){
+            pile.push(site_xy(x-1,y));
+            case1.dist_cristal = z;
+            case1.taille_crist_proche = h;
         }
-        for(Site site_test : crist_proche.listeSites){
-            float d2 = (site._x - site_test._x) * (site._x - site_test._x);
-            d2 += (site._y - site_test._y) * (site._y - site_test._y);
-            if(d2 < d_min2){
-                d_min2 = d2;
-            }
+        Case& case2 = (*this)[site_xy(x+1,y)];
+        if(case2.type < 0 && case2.dist_cristal/sqrt(case2.taille_crist_proche) > z/sqrt(h)+ 1e-20){
+            pile.push(site_xy(x+1,y));
+            case2.dist_cristal = z;
+            case2.taille_crist_proche = h;
         }
-        float d = dx * sqrt(d_min2);
-        distances.push_back(d);
-        cristaux_proches.push_back(crist_proche);
+        Case& case3 = (*this)[site_xy(x,y-1)];
+        if(case3.type < 0 && case3.dist_cristal/sqrt(case3.taille_crist_proche) > z/sqrt(h)+ 1e-20){
+            pile.push(site_xy(x,y-1));
+            case3.dist_cristal = z;
+            case3.taille_crist_proche = h;
+        }
+        Case& case4 = (*this)[site_xy(x,y+1)];
+        if(case4.type < 0 && case4.dist_cristal/sqrt(case4.taille_crist_proche) > z/sqrt(h)+ 1e-20){
+            pile.push(site_xy(x,y+1));
+            case4.dist_cristal = z;
+            case4.taille_crist_proche = h;
+        }             
     }
-}
 
-void Reseau::proximite_gros_cristal(std::vector<Site>& sites, std::vector<float>& distances, std::vector<Site>& cristaux_proches){
-    for(Site site : sites){
-        float d_min2 = nx*nx + ny*ny; 
-        Cristal crist_proche;
-        // Utilise l'heuristique que le cristal le plus proche est celui ayant le premier site le plus proche, sinon, augmente trop la complexité
-        for(Cristal crist : cristaux){
-            if(crist.nbSites*dx*dx > 1e-12){
-                float d2 = (site._x - crist.listeSites[0]._x) * (site._x - crist.listeSites[0]._x);
-                d2 += (site._y - crist.listeSites[0]._y) * (site._y - crist.listeSites[0]._y);
-                if(d2 < d_min2){
-                    d_min2 = d2;
-                    crist_proche = crist;
-                }
-            }
-        }
-        Site site_proche;
-        for(Site site_test : crist_proche.listeSites){
-            float d2 = (site._x - site_test._x) * (site._x - site_test._x);
-            d2 += (site._y - site_test._y) * (site._y - site_test._y);
-            if(d2 < d_min2){
-                d_min2 = d2;
-                site_proche = site_test;
-            }
-        }
-        float d = dx * sqrt(d_min2);
-        distances.push_back(d);
-        cristaux_proches.push_back(site_proche);
-    }
 }
 
 void Reseau::pas_de_temps(float proportion_cristalliser){
@@ -292,21 +276,40 @@ void Reseau::pas_de_temps(float proportion_cristalliser){
                                             tab[site_xy(x,y+1)._index].type};
             int *type = std::max_element(type_vois.begin(), type_vois.end());
             cristallisation_1case(site,*type);
+            ajuste_dist(site);
         }
     }
-    // Calcul la distance de ces cases
-    std::vector<float> distance;
-    std::vector<Cristal> cristal_proche;
-    proximite_cristal(surface, distance, cristal_proche);
     for(size_t i = 0; i < surface.size(); i++){
         // Ajuste la surface pour que le menisque suive le cristal
-        if(tab[surface[i]._index].type == -2){
-            if(distance[i] < sqrt(cristal_proche[i].nbSites) * 3 * dx){
-                tab[surface[i]._index].type = -1;
+        double dist = tab[surface[i]._index].dist_cristal;
+        double taille = tab[surface[i]._index].taille_crist_proche;
+        if(dist < 4 * taille){
+            int x = surface[i]._x;
+            int y = surface[i]._y;
+            if((*this)[site_xy(x-1,y)].type == -2){
+                tab[site_xy(x-1,y)._index].type = -1;
+                tab[site_xy(x-1,y)._index].dist_cristal = dist + dx;
+                tab[site_xy(x-1,y)._index].taille_crist_proche = taille;
+            }
+            if((*this)[site_xy(x+1,y)].type == -2){
+                tab[site_xy(x+1,y)._index].type = -1;
+                tab[site_xy(x+1,y)._index].dist_cristal = dist + dx;
+                tab[site_xy(x+1,y)._index].taille_crist_proche = taille;
+            }
+            if((*this)[site_xy(x,y-1)].type == -2){
+                tab[site_xy(x,y-1)._index].type = -1;
+                tab[site_xy(x,y-1)._index].dist_cristal = dist + dx;
+                tab[site_xy(x,y-1)._index].taille_crist_proche = taille;
+            }
+            if((*this)[site_xy(x,y+1)].type == -2){
+                tab[site_xy(x,y+1)._index].type = -1;
+                tab[site_xy(x,y+1)._index].dist_cristal = dist + dx;
+                tab[site_xy(x,y+1)._index].taille_crist_proche = taille;
             }
         }
     }
     // Recherche des petits cristaux (moins de 1µm2)
+    /*
     std::vector<Site> petits_cristaux;
     for(Cristal crist : cristaux){
         if(crist.nbSites*dx*dx < 1e-13){
@@ -349,7 +352,7 @@ void Reseau::pas_de_temps(float proportion_cristalliser){
             }
             crist.listeSites.erase(crist.listeSites.begin() + l);
         }
-    }
+    }*/
 
 
 }

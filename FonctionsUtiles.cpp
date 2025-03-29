@@ -25,5 +25,9 @@ float concentration(float dist, float tailleCristal){
     float h = sqrt(tailleCristal);
     float CsurCsat = sqrt(J / (1000*h*1.9e-9))*dist;
     CsurCsat = exp(CsurCsat);
+    // prise en compte de l'effet Kelvin
+    float fact_taille_crist = 2 * 70e-3 * 31.9e-6;
+    fact_taille_crist /= 8.31*300 * tailleCristal;
+    CsurCsat *= exp(fact_taille_crist);
     return CsurCsat;
 }

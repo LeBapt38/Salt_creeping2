@@ -31,8 +31,8 @@ proportion = nombre / nombre.sum()
 taille *= 1e6
 
 plt.bar(taille, proportion, width = 1, edgecolor='black', alpha=0.7)
-plt.xlabel("Taille des cristaux en µm", fontsize = 16)
-plt.ylabel("Proportion de cristaux de cette taille", fontsize = 16)
+plt.xlabel("Size of crystals in µm", fontsize = 16)
+plt.ylabel("Proportion of crystals", fontsize = 16)
 plt.show()
 
 ## affichage
@@ -62,11 +62,11 @@ plt.imshow(grille_col, extent = extent)
 plt.show()
 
 ## Animation
-nb_fichiers = 50
+nb_fichiers = 104
 
 df = pd.read_csv("image0.dat", delimiter="\s+", header=None)
 grille_types = df.to_numpy()
-grille_animation = np.full((nb_fichiers, grille_types.shape[0], grille_types.shape[1],3), 0)
+grille_animation = np.full((nb_fichiers, 100, 100,3), 0)
 
 for i in range(nb_fichiers) :
     df = pd.read_csv(f"image{i}.dat", delimiter="\s+", header=None)
@@ -84,7 +84,7 @@ for i in range(nb_fichiers) :
     for j in range(nb_cristaux + 1) :
         mask_cristaux = grille_types == j
         grille_col[mask_cristaux] = [30 + j, 30+j, 30+j]
-    grille_animation[i,:,:,:] = grille_col
+    grille_animation[i,:,:,:] = grille_col[-100:, -100:, :]
 
 
 # Create figure and axis
@@ -99,6 +99,8 @@ def update(frame):
 
 # Create the animation
 ani = animation.FuncAnimation(fig, update, frames=nb_fichiers, interval=100, blit=False, repeat=True)
+
+ani.save("animation77frame.gif", fps=5)
 
 # Show the animation
 plt.show()
