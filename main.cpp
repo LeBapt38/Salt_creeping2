@@ -8,7 +8,7 @@ using namespace std;
 
 int nx = 1000;
 int ny = 500;
-float dx = 5e-8;
+float dx = 1e-7;
 bool visualisation = true;
 int nb_pas_tps_image = 50;
 int nb_image = 1000;
@@ -24,16 +24,15 @@ int main(){
         }
     }
     if(visualisation){
-        sf::ContextSettings settings; settings.antialiasingLevel = 8; 
-        sf::RenderWindow win (sf::VideoMode(nx,ny), "Mon super projet");
+        sf::ContextSettings settings; settings.antiAliasingLevel = 8; 
+        sf::RenderWindow win (sf::VideoMode(sf::Vector2u(nx, ny)), "Mon super projet");
         while (win.isOpen()){
             for(int i = 0; i < nb_pas_tps_image; i++){
                 res.pas_de_temps(0.001);
             }
-            win.clear(); 
-            sf::Event event;
-            while (win.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) win.close();
+            win.clear();
+            while (const std::optional event = win.pollEvent()) {
+                if (event->is<sf::Event::Closed>()) win.close();
             }
             res.affiche_SFML(win,0,0);
             win.display();

@@ -283,7 +283,7 @@ void Reseau::pas_de_temps(float proportion_cristalliser){
         // Ajuste la surface pour que le menisque suive le cristal
         double dist = tab[surface[i]._index].dist_cristal;
         double taille = tab[surface[i]._index].taille_crist_proche;
-        if(dist < 4 * taille){
+        if(dist < 2 * taille){
             int x = surface[i]._x;
             int y = surface[i]._y;
             if((*this)[site_xy(x-1,y)].type == -2){
@@ -396,7 +396,7 @@ void Reseau::affiche_SFML(sf::RenderWindow& window, float x, float y) const{
                 int col = 100 + tab[site_xy(i,j)._index].type;
                 rectangle.setFillColor(sf::Color(col,col,col));
             }
-            rectangle.setPosition(x+i, y+j);
+            rectangle.setPosition(sf::Vector2f(x+i, y+j));
             window.draw(rectangle);
         }
     }
