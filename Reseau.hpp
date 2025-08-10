@@ -6,6 +6,7 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <omp.h>
 #include "Case.hpp"
 class Site;
 #include"Cristaux.hpp"
@@ -62,11 +63,11 @@ public :
     void cristallisation_1case(Site, int type);
     std::vector<int> type_crist_vois(std::array<Site,8>); // renvoie false si la case est est en contact avec deux cristaux différents.
     int nb_bord_commun(Site);
-    float energie_liaison_site(Site,float El = 10*6.4e-19);
-    float proba_site(Site, float long_liaison = 2.36e-10 ,float T = 315); // non normalise!!!, met a jour la proba de cristallisation dans la classe case et renvoie la meme proba
-    std::vector<Site> sites_a_traiter(std::vector<Site>&);
+    float energie_liaison_site(Site,float El);
+    float proba_site(Site, float long_liaison,float T, float J, float El); // non normalise!!!, met a jour la proba de cristallisation dans la classe case et renvoie la meme proba
+    std::vector<Site> sites_a_traiter(std::vector<Site>&); //Prends le vecteur avec les sites a traiter, en profite pour renvoyer les cases definissant la surface
     void ajuste_dist(Site site);
-    void pas_de_temps(float proportion_cristalliser); //renvoie dt
+    void pas_de_temps(float proportion_cristalliser, float long_liaison = 2.36e-10 ,float T = 315, float J = 1e-3 / (3.6*0.5), float El = 100*6.4e-19); //renvoie dt
 
 // Rendue 
     void affiche_SFML(sf::RenderWindow& window, float x, float y) const;

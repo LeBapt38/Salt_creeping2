@@ -173,13 +173,13 @@ float Reseau::energie_liaison_site(Site site, float El){
     return energie;
 }
 
-float Reseau::proba_site(Site site, float long_liaison, float T){
-    float energie = energie_liaison_site(site);
+float Reseau::proba_site(Site site, float long_liaison, float T, float J, float El){
+    float energie = energie_liaison_site(site, El);
     float proba = exp(energie * long_liaison / (dx * 1.38e-23 * T));
     if(energie < 0){
         proba = 0;
     }
-    float CsurCsat = concentration(tab[site._index].dist_cristal, tab[site._index].taille_crist_proche);
+    float CsurCsat = concentration(tab[site._index].dist_cristal, tab[site._index].taille_crist_proche, J);
     proba *= CsurCsat;
     tab[site._index].proba_cristallisation = proba;
     return proba;
@@ -187,30 +187,42 @@ float Reseau::proba_site(Site site, float long_liaison, float T){
 
 std::vector<Site> Reseau::sites_a_traiter(std::vector<Site>& a_traiter){
     std::vector<Site> surface;
-    for(int i = 0; i < nx*ny; i++){
-        if(tab[i].type == -1){
-            // ajout de la case
-            a_traiter.push_back(site_index(i));
+    std::vector<Site> a_traiter_local, surface_local;
+    #pragma omp parallel
+    {
+        std::vector<Site> a_traiter_private, surface_private;
+        #pragma omp for nowait
+        for(int i = 0; i < nx*ny; i++){
+            if(tab[i].type == -1){
+                a_traiter_private.push_back(site_index(i));
+            }
+            if(tab[i].type > -2){
+                Site site = site_index(i);
+                int x = site._x;
+                int y = site._y;
+                if((*this)[site_xy(x-1,y)].type == -2){
+                    surface_private.push_back(site_xy(x,y));
+                }
+                if((*this)[site_xy(x+1,y)].type == -2){
+                    surface_private.push_back(site_xy(x,y));
+                }
+                if((*this)[site_xy(x,y-1)].type == -2){
+                    surface_private.push_back(site_xy(x,y));
+                }
+                if((*this)[site_xy(x,y+1)].type == -2){
+                    surface_private.push_back(site_xy(x,y));
+                }
+            }
         }
-        if(tab[i].type > -2){
-            // Mis à jour de la surface
-            Site site = site_index(i);
-            int x = site._x;
-            int y = site._y;
-            if((*this)[site_xy(x-1,y)].type == -2){
-                surface.push_back(site_xy(x,y));
-            }
-            if((*this)[site_xy(x+1,y)].type == -2){
-                surface.push_back(site_xy(x,y));
-            }
-            if((*this)[site_xy(x,y-1)].type == -2){
-                surface.push_back(site_xy(x,y));
-            }
-            if((*this)[site_xy(x,y+1)].type == -2){
-                surface.push_back(site_xy(x,y));
-            }
+        #pragma omp critical
+        {
+            a_traiter_local.insert(a_traiter_local.end(), a_traiter_private.begin(), a_traiter_private.end());
+            surface_local.insert(surface_local.end(), surface_private.begin(), surface_private.end());
         }
     }
+    // assign results
+    a_traiter = std::move(a_traiter_local);
+    surface = std::move(surface_local);
     return surface;
 }
 
@@ -252,19 +264,22 @@ void Reseau::ajuste_dist(Site site){
 
 }
 
-void Reseau::pas_de_temps(float proportion_cristalliser){
+void Reseau::pas_de_temps(float proportion_cristalliser, float long_liaison, float T, float J, float El){
     // extraction des cases a traiter
     std::vector<Site> a_traiter;
     std::vector<Site> surface = sites_a_traiter(a_traiter);
     // calcul des probabilites de cristallisations
     float normalisation_proba = 0;
+    #pragma omp parallel for
     for(Site site : a_traiter){
-        normalisation_proba += proba_site(site);
+        normalisation_proba += proba_site(site, long_liaison, T, J, El);
     }
     float nb_site_a_cristalliser = 1 + surface.size() * proportion_cristalliser;
     normalisation_proba /= nb_site_a_cristalliser;
     // Cristallisation
-    for(Site site : a_traiter){
+    #pragma omp parallel for
+    for(size_t i = 0; i < a_traiter.size(); i++) {
+        Site site = a_traiter[i];
         tab[site._index].proba_cristallisation /= normalisation_proba;
         float a = float(rand()) / RAND_MAX;
         if(a < tab[site._index].proba_cristallisation){
@@ -275,9 +290,14 @@ void Reseau::pas_de_temps(float proportion_cristalliser){
                                             tab[site_xy(x,y-1)._index].type,
                                             tab[site_xy(x,y+1)._index].type};
             int *type = std::max_element(type_vois.begin(), type_vois.end());
+            // If cristallisation_1case is not thread-safe, protect it:
+            #pragma omp critical
             cristallisation_1case(site,*type);
-            ajuste_dist(site);
         }
+    }
+    for(Site site : a_traiter){
+        // Ajustement de la distance au cristal
+        ajuste_dist(site);
     }
     for(size_t i = 0; i < surface.size(); i++){
         // Ajuste la surface pour que le menisque suive le cristal

@@ -20,8 +20,7 @@ float joint_grain(float theta){
 }
 
 
-float concentration(float dist, float tailleCristal){
-    float J = 1e-3 / (3.6*0.5);
+float concentration(float dist, float tailleCristal, float J){
     float h = sqrt(tailleCristal);
     float CsurCsat = sqrt(J / (1000*h*1.9e-9))*dist;
     CsurCsat = exp(CsurCsat);
