@@ -1,3 +1,4 @@
+# %%
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, FuncFormatter
 import matplotlib.animation as animation
@@ -5,6 +6,7 @@ import numpy as np
 import pandas as pd
 from math import pi
 
+# %%
 ## taille cristaux
 test = np.random.rand(200)
 
@@ -35,10 +37,11 @@ plt.xlabel("Size of crystals in µm", fontsize = 16)
 plt.ylabel("Proportion of crystals", fontsize = 16)
 plt.show()
 
+# %%
 ## affichage
 test = np.array([[-2, -1, -1],[0,0,1],[3,3,4]])
 
-df = pd.read_csv("image90.dat", delimiter="\s+", header=None)
+df = pd.read_csv("Data_T/image10_T316.149994.dat", delimiter="\s+", header=None)
 grille_types = df.to_numpy()
 grille_types = np.flip(grille_types.T, axis=0)
 dx = 1e-7
@@ -52,7 +55,7 @@ mask_air = grille_types == -2
 grille_col[mask_air] = [255,255,255]
 for i in range(nb_cristaux + 1) :
     mask_cristaux = grille_types == i
-    grille_col[mask_cristaux] = [30 + i, 30+i, 30+i]
+    grille_col[mask_cristaux] = [30, 30, 30]
 
 
 
@@ -61,6 +64,7 @@ extent = [0, dx * grille_types.shape[0], 0, dx * grille_types.shape[1]]
 plt.imshow(grille_col, extent = extent)
 plt.show()
 
+# %%
 ## Animation
 nb_fichiers = 104
 
@@ -106,6 +110,35 @@ ani.save("animation77frame.gif", fps=5)
 plt.show()
 
 
+# %%
+## Etude par rapport à la température
+def Taille_cristaux_moyenne(T):
+    file = pd.read_csv(f"Data_T/taille_cristaux{T}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), taille_crist.std())
 
+Temperatures = np.array([288.149994 + 2*i for i in range(15)])
+Tailles = [Taille_cristaux_moyenne(T) for T in Temperatures]
+Mean = np.array([t[0] for t in Tailles])
+Std = np.array([t[1]/t[0] for t in Tailles])
+Temperatures -= 273.15  # Convert to Celsius
+Mean *= 1e6  # Convert to micrometers
 
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 8))
 
+# Mean plot
+ax1.plot(Temperatures, Mean, marker='o')
+ax1.set_ylabel("Average crystal size ($\mu m$)", fontsize=14)
+ax1.set_title("Average crystal size vs Temperature", fontsize=16)
+ax1.grid(True)
+
+# Std plot
+ax2.plot(Temperatures, Std, marker='s', color='orange')
+ax2.set_xlabel("Temperature (K)", fontsize=14)
+ax2.set_ylabel("Std of crystal size normalized by the mean", fontsize=14)
+ax2.set_title("Std of crystal size vs Temperature", fontsize=16)
+ax2.grid(True)
+
+plt.tight_layout()
+plt.show()
+# %%
