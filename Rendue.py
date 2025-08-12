@@ -142,3 +142,34 @@ ax2.grid(True)
 plt.tight_layout()
 plt.show()
 # %%
+## Etude par rapport à l'evaporation
+def Taille_cristaux_moyenne(E):
+    file = pd.read_csv(f"Data_J/taille_cristaux{E:.6f}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), taille_crist.std())
+
+Evaporation = np.array([0.56, 1.11, 1.67, 2.22, 2.78, 3.33, 3.89, 4.44, 5.00, 5.56, 6.11, 6.67, 7.22, 7.78, 8.33])  # Evaporation values in kg/m^2/s
+Evaporation *= 1e-4
+Tailles = [Taille_cristaux_moyenne(E) for E in Evaporation]
+Mean = np.array([t[0] for t in Tailles])
+Std = np.array([t[1]/t[0] for t in Tailles])
+Mean *= 1e6  # Convert to micrometers
+
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 8))
+
+# Mean plot
+ax1.plot(Evaporation, Mean, marker='o')
+ax1.set_ylabel("Average crystal size ($\mu m$)", fontsize=14)
+ax1.set_title("Average crystal size vs Temperature", fontsize=16)
+ax1.grid(True)
+
+# Std plot
+ax2.plot(Evaporation, Std, marker='s', color='orange')
+ax2.set_xlabel("Evaporation", fontsize=14)
+ax2.set_ylabel("Std of crystal size normalized by the mean", fontsize=14)
+ax2.set_title("Std of crystal size vs Evaporation", fontsize=16)
+ax2.grid(True)
+
+plt.tight_layout()
+plt.show()
+# %%

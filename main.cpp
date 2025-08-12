@@ -6,13 +6,13 @@
 using namespace std;
 
 // Paramettres for the simulation
-int nx = 800;
+int nx = 700;
 int ny = 300;
 float dx = 1e-7;
 bool visualisation = false; // Set to true for visualisation with SFML
 int nb_pas_tps_image = 10000;
 int nb_image = 10;
-string folder_data = "/Users/baptisteguilleminot/Documents/FPT/Salt_creeping2/Data_T/";
+string folder_data = "/Users/baptisteguilleminot/Documents/FPT/Salt_creeping2/Data_J/";
 // Physical constants
 float J = 1e-3 / (3.6 * 0.5); // Evaporation constant
 float El = 6.4e-18; // Energy of the link in Joules
@@ -45,7 +45,7 @@ int main(){
         cout << res[res.site_xy(-1,-1)].get_type() << endl;
     }else{
         #pragma omp parallel for num_threads(5)
-        for(int k = 0; k < 15; k++){
+        for(int k = 1; k <= 15; k++){
             Case val_defaut = Case();
             Reseau res(nx,ny,dx,val_defaut);
             for(int i = 0; i < 50; i++){
@@ -53,21 +53,21 @@ int main(){
                     res[res.site_xy(i,j)].set_type(-1);
                 }
             }
-            float T_thread = T + k*2; //Increase temperature for each parallel thread
+            float J_thread = J * (0.1 * k); //Increase temperature for each parallel thread
             for(int i = 0; i < nb_image; i++){
                 for(int j = 0; j < nb_pas_tps_image; j++){
-                    res.pas_de_temps(0.001, long_liaison, T_thread, J, El);
+                    res.pas_de_temps(0.001, long_liaison, T, J_thread, El);
                     if(j%1000 == 0){
                         cout << j << " pas de temps depuis dernière image. \n";
                     }
                 }
-                string nom_fichier = folder_data + "image" + to_string(i+1) + "_T" + to_string(T_thread) + ".dat";
+                string nom_fichier = folder_data + "image" + to_string(i+1) + "_J" + to_string(J_thread) + ".dat";
                 res.enregistre_grille(nom_fichier);
                 cout << i + 1 << " images enregistées.\n";
             }
-            string nom_fichier_taille = folder_data + "taille_cristaux" + to_string(T_thread) + ".dat";
+            string nom_fichier_taille = folder_data + "taille_cristaux" + to_string(J_thread) + ".dat";
             res.liste_taille_crist(nom_fichier_taille);
-            cout << "Thread " << k << " finished with temperature: " << T_thread << endl;
+            cout << "Thread " << k << " finished with evaporation: " << J_thread << endl;
         }
     }
     return 0;
