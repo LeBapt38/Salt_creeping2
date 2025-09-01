@@ -3,4 +3,5 @@ sfml-app
 Data/*
 Data_T/*
 Data_J/*
+Data_dx/*
 .DS_Store

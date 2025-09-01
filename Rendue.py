@@ -68,12 +68,12 @@ plt.show()
 ## Animation
 nb_fichiers = 104
 
-df = pd.read_csv("image0.dat", delimiter="\s+", header=None)
+df = pd.read_csv("Data/image0.dat", delimiter="\s+", header=None)
 grille_types = df.to_numpy()
 grille_animation = np.full((nb_fichiers, 100, 100,3), 0)
 
 for i in range(nb_fichiers) :
-    df = pd.read_csv(f"image{i}.dat", delimiter="\s+", header=None)
+    df = pd.read_csv(f"Data/image{i}.dat", delimiter="\s+", header=None)
     grille_types = df.to_numpy()
     grille_types = np.flip(grille_types.T, axis=0)
     dx = 1e-7
@@ -87,7 +87,7 @@ for i in range(nb_fichiers) :
     grille_col[mask_air] = [255,255,255]
     for j in range(nb_cristaux + 1) :
         mask_cristaux = grille_types == j
-        grille_col[mask_cristaux] = [30 + j, 30+j, 30+j]
+        grille_col[mask_cristaux] = [(30 + j)%256, (30 + j)%256, (30 + j)%256]
     grille_animation[i,:,:,:] = grille_col[-100:, -100:, :]
 
 
@@ -104,7 +104,7 @@ def update(frame):
 # Create the animation
 ani = animation.FuncAnimation(fig, update, frames=nb_fichiers, interval=100, blit=False, repeat=True)
 
-ani.save("animation77frame.gif", fps=5)
+ani.save("Data/animation77frame.gif", fps=5)
 
 # Show the animation
 plt.show()
@@ -171,5 +171,80 @@ ax2.set_title("Std of crystal size vs Evaporation", fontsize=16)
 ax2.grid(True)
 
 plt.tight_layout()
+plt.show()
+# %%
+## Etude par rapport au spacing
+def Taille_cristaux_moyenne(dx):
+    file = pd.read_csv(f"Data_dx/taille_cristaux{dx:.6f}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), taille_crist.std())
+
+Spacing = np.array([0.600000, 0.700000, 0.800000, 0.900000, 1.000000, 1.100000, 1.200000, 1.300000, 1.500000, 1.600000, 1.800000, 1.900000])  # Evaporation values in kg/m^2/s
+Tailles = [Taille_cristaux_moyenne(dx) for dx in Spacing]
+Mean = np.array([t[0] for t in Tailles])
+Std = np.array([t[1]/t[0] for t in Tailles])
+Mean *= 1e6  # Convert to micrometers
+
+fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 8))
+
+# Mean plot
+ax1.plot(Spacing*1e-1, Mean, marker='o')
+ax1.set_ylabel("Average crystal size ($\mu m$)", fontsize=14)
+ax1.set_title("Average crystal size vs Spacing ($\mu m$)", fontsize=16)
+ax1.grid(True)
+
+# Std plot
+ax2.plot(Spacing*1e-1, Std, marker='s', color='orange')
+ax2.set_xlabel("Spacing (m)", fontsize=14)
+ax2.set_ylabel("Std of crystal size normalized by the mean", fontsize=14)
+ax2.set_title("Std of crystal size vs Spacing($\mu m$)", fontsize=16)
+ax2.grid(True)
+
+plt.tight_layout()
+plt.show()
+# %%
+## Etude CI par rapport au spacing
+def Taille_cristaux_moyenne(dx):
+    file = pd.read_csv(f"Data_dx/taille_cristaux{dx:.6f}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), np.percentile(taille_crist, [16, 84]))
+
+Spacing = np.array([0.600000, 0.700000, 0.800000, 0.900000, 1.000000, 1.100000, 1.200000, 1.300000, 1.500000, 1.600000, 1.800000, 1.900000])  # Evaporation values in kg/m^2/s
+Tailles = [Taille_cristaux_moyenne(dx) for dx in Spacing]
+Mean = np.array([t[0] for t in Tailles])
+ci68 = np.array([t[1] for t in Tailles])*1e6
+Mean *= 1e6  # Convert to micrometers
+
+
+plt.errorbar(Spacing*1e-1, Mean, yerr=[abs(Mean - ci68[:,0]), abs(ci68[:,1] - Mean)], fmt='o', color='blue')
+plt.show()
+# %%Etude CI par rapport à la température
+def Taille_cristaux_moyenne(T):
+    file = pd.read_csv(f"Data_T/taille_cristaux{T}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), np.percentile(taille_crist, [16, 84]))
+
+Temperatures = np.array([288.149994 + 2*i for i in range(15)])
+Tailles = [Taille_cristaux_moyenne(T) for T in Temperatures]
+Mean = np.array([t[0] for t in Tailles]) * 1e6
+ci68 = np.array([t[1] for t in Tailles]) * 1e6
+Temperatures -= 273.15  # Convert to Celsius
+
+plt.errorbar(Temperatures, Mean, yerr=[abs(Mean - ci68[:,0]), abs(ci68[:,1] - Mean)], fmt='o', color='blue')
+plt.show()
+# %%Etude CI par rapport à l'evaporation
+def Taille_cristaux_moyenne(E):
+    file = pd.read_csv(f"Data_J/taille_cristaux{E:.6f}.dat", delimiter="\s+", header=None)
+    taille_crist = file.to_numpy()
+    return (taille_crist.mean(), np.percentile(taille_crist, [16, 84]))
+
+Evaporation = np.array([0.56, 1.11, 1.67, 2.22, 2.78, 3.33, 3.89, 4.44, 5.00, 5.56, 6.11, 6.67, 7.22, 7.78, 8.33])  # Evaporation values in kg/m^2/s
+Evaporation *= 1e-4
+Tailles = [Taille_cristaux_moyenne(E) for E in Evaporation]
+Mean = np.array([t[0] for t in Tailles])
+ci68 = np.array([t[1] for t in Tailles]) * 1e6
+Mean *= 1e6  # Convert to micrometers
+
+plt.errorbar(Evaporation, Mean, yerr=[abs(Mean - ci68[:,0]), abs(ci68[:,1] - Mean)], fmt='o', color='blue')
 plt.show()
 # %%
